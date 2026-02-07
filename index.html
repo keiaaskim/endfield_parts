@@ -1,52 +1,63 @@
-드디어 모든 퍼즐 조각이 모였습니다! 제공해주신 두 개의 실시간 CSV 주소를 연동하여, 미보유 무기 중 종결 기질을 얻을 확률이 가장 높은 지역과 조합을 찾아내는 최종 코드를 완성했습니다.
-
-이 코드는 사용자님이 직접 parts_list를 일일이 대조하지 않아도, 현재 인벤토리에 없는 조합을 자동으로 계산하여 최적의 파밍지를 추천해 줍니다.
-
-🛠️ 최종 index.html 코드
-아래 코드를 복사해서 깃허브의 index.html 파일에 덮어쓰기 하세요. (이미 주소들을 코드 안에 넣어두었습니다.)
-
-HTML
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엔드필드 파밍 최적화 도구</title>
+    <title>엔드필드 파밍 대시보드</title>
     <style>
-        :root { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --accent: #fbac24; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 600px; }
-        .card { background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { font-size: 1.5rem; margin-bottom: 20px; text-align: center; color: var(--accent); }
-        .btn { background: var(--accent); color: #000; padding: 15px; border: none; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; transition: 0.2s; font-size: 1rem; }
-        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .result-section { margin-top: 25px; display: none; border-top: 1px solid #444; padding-top: 20px; }
-        .res-item { margin-bottom: 15px; font-size: 1.1rem; }
-        .label { color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 4px; }
-        .value { font-weight: 700; color: #fff; }
-        .tag { display: inline-block; background: #444; padding: 4px 10px; border-radius: 6px; margin-right: 5px; margin-top: 5px; font-size: 0.9rem; }
+        :root { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #fbac24; --border: #333; --highlight: rgba(251, 172, 36, 0.2); }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* 레이아웃 구성 */
+        .left-panel { flex: 1; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); }
+        .right-panel { width: 350px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 20px; }
+
+        /* 테이블 디자인 */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        thead { position: sticky; top: 0; background: var(--card); z-index: 10; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--accent); font-weight: 600; text-transform: uppercase; }
+        tr:hover { background: #252525; }
+        
+        /* 분석 결과 하이라이트 */
+        tr.target-row { background: var(--highlight) !important; border-left: 4px solid var(--accent); }
+
+        /* 카드 디자인 */
+        .analysis-card { background: #252525; padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .btn { background: var(--accent); color: #000; padding: 15px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; }
+        .result-item { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
+        .tag { display: inline-block; background: #444; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card">
-            <h1>🚀 파밍 최적 지역 스캐너</h1>
-            <button class="btn" onclick="runAnalysis()">실시간 데이터 분석 시작</button>
+    <div class="left-panel">
+        <table id="weapon-table">
+            <thead>
+                <tr>
+                    <th>무기명</th><th>캐릭</th><th>보유</th><th>우선</th><th>기초</th><th>추가</th><th>스킬</th><th>기질</th>
+                </tr>
+            </thead>
+            <tbody id="weapon-body">
+                </tbody>
+        </table>
+    </div>
+
+    <div class="right-panel">
+        <div class="analysis-card">
+            <h2 style="margin-top:0; color:var(--accent);">🎯 파밍 스캐너</h2>
+            <button class="btn" onclick="runAnalysis()">실시간 데이터 분석</button>
             
-            <div id="result" class="result-section">
-                <div class="res-item">
-                    <span class="label">추천 파밍 지역</span>
-                    <span id="best-area" class="value" style="font-size: 1.4rem; color: var(--accent);"></span>
+            <div id="result-box" style="display:none;">
+                <div class="result-item">
+                    <small>추천 지역</small><br><b id="res-area" style="font-size:1.2rem;">-</b>
                 </div>
-                <div class="res-item">
-                    <span class="label">고정할 속성 (추가/스킬 중 택 1)</span>
-                    <span id="best-fixed" class="value"></span>
+                <div class="result-item">
+                    <small>고정 속성</small><br><b id="res-fixed">-</b>
                 </div>
-                <div class="res-item">
-                    <span class="label">추천 기초속성 3종</span>
-                    <div id="best-bases"></div>
+                <div class="result-item">
+                    <small>기초속성 3종</small><div id="res-bases"></div>
                 </div>
-                <div id="summary" style="font-size: 0.9rem; color: #888; margin-top: 10px;"></div>
+                <p id="res-summary" style="font-size:0.8rem; color:#888;"></p>
             </div>
         </div>
     </div>
@@ -55,84 +66,84 @@ HTML
         const WEAPON_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvCoDDcCH_LVoRliGUwW0cAGOJtps8Ucmjj_ENOJxSuyGowRtq2heV5jh8VkVVTnwCoguGecjAkT6v/pub?gid=1336240927&single=true&output=csv";
         const PARTS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvCoDDcCH_LVoRliGUwW0cAGOJtps8Ucmjj_ENOJxSuyGowRtq2heV5jh8VkVVTnwCoguGecjAkT6v/pub?gid=545530430&single=true&output=csv";
 
+        let weaponData = [];
+        let inventory = [];
+
+        // 초기 데이터 로드
+        async function init() {
+            const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
+            weaponData = parseCSV(await wRes.text());
+            inventory = parseCSV(await pRes.text());
+            renderTable();
+        }
+
+        function renderTable(targetList = []) {
+            const body = document.getElementById('weapon-body');
+            
+            // 정렬 로직
+            const sorted = [...weaponData].sort((a, b) => {
+                const aHasPart = a['기질보유'] === 'ㅇ' ? 1 : 0;
+                const bHasPart = b['기질보유'] === 'ㅇ' ? 1 : 0;
+                if (aHasPart !== bHasPart) return aHasPart - bHasPart; // 1순위: 기질 미보유 위로
+
+                const aHasWeapon = a['무기보유'] === 'ㅇ' ? 1 : 0;
+                const bHasWeapon = b['무기보유'] === 'ㅇ' ? 1 : 0;
+                if (aHasWeapon !== bHasWeapon) return bHasWeapon - aHasWeapon; // 2순위: 무기 보유 우선
+
+                const aPriority = a['우선순위'] === 'ㅇ' ? 1 : 0;
+                const bPriority = b['우선순위'] === 'ㅇ' ? 1 : 0;
+                if (aPriority !== bPriority) return bPriority - aPriority; // 3순위: 우선순위 체크
+
+                return a['기초속성'].localeCompare(b['기초속성']); // 나머지 속성순
+            });
+
+            body.innerHTML = sorted.map(w => {
+                const isTarget = targetList.some(t => t['무기명'] === w['무기명']);
+                return `
+                    <tr class="${isTarget ? 'target-row' : ''}">
+                        <td>${w['무기명']}</td><td>${w['사용캐릭']}</td>
+                        <td>${w['무기보유']}</td><td>${w['우선순위']}</td>
+                        <td>${w['기초속성']}</td><td>${w['추가속성']}</td>
+                        <td>${w['스킬속성']}</td><td>${w['기질보유']}</td>
+                    </tr>`;
+            }).join('');
+        }
+
         async function runAnalysis() {
-            try {
-                const [wRes, pRes, aRes] = await Promise.all([
-                    fetch(WEAPON_CSV), fetch(PARTS_CSV), fetch('areas.json')
-                ]);
-                
-                const weapons = parseCSV(await wRes.text());
-                const inventory = parseCSV(await pRes.text());
-                const areas = await aRes.json();
+            const aRes = await fetch('areas.json');
+            const areas = await aRes.json();
 
-                // 1. 내가 현재 '가지고 있지 않은' 종결 기질 리스트 파악
-                const neededGears = weapons.filter(w => {
-                    // 인벤토리에 기초/추가/스킬 3개가 모두 일치하는 데이터가 있는지 확인
-                    const hasIt = inventory.some(p => 
-                        p['기초속성'] === w['기초속성'] && 
-                        p['추가속성'] === w['추가속성'] && 
-                        p['스킬속성'] === w['스킬속성']
-                    );
-                    return !hasIt;
-                });
+            // 미보유 기질 필터링 (재고 대조)
+            const needed = weaponData.filter(w => !inventory.some(p => 
+                p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']
+            ));
 
-                if (neededGears.length === 0) {
-                    alert("모든 종결 기질을 보유 중입니다! 🎉");
-                    return;
-                }
+            let best = { score: -1, targets: [] };
 
-                // 2. 모든 지역/속성 조합 시뮬레이션
-                let bestResult = { score: -1 };
-
-                areas.forEach(area => {
-                    const allPossibleFixed = [...new Set([...area.extra, ...area.skill])];
-                    
-                    allPossibleFixed.forEach(fixedAttr => {
-                        // 현재 지역+고정속성에서 나올 수 있는 '필요한 무기'들
-                        const matchableWeapons = neededGears.filter(w => {
-                            const canBase = area.base.includes(w['기초속성']);
-                            const canFixed = (w['추가속성'] === fixedAttr || w['스킬속성'] === fixedAttr);
-                            return canBase && canFixed;
-                        });
-
-                        if (matchableWeapons.length > 0) {
-                            // 이 조합에서 가장 당첨 확률을 높여줄 기초속성 3종 계산
-                            const baseCounts = {};
-                            matchableWeapons.forEach(w => {
-                                baseCounts[w['기초속성']] = (baseCounts[w['기초속성']] || 0) + 1;
-                            });
-                            const topBases = Object.entries(baseCounts)
-                                .sort((a,b) => b[1] - a[1])
-                                .slice(0, 3)
-                                .map(e => e[0]);
-
-                            // 점수 계산: 기초 3종에 포함된 무기 수
-                            const finalScore = matchableWeapons.filter(w => topBases.includes(w['기초속성'])).length;
-
-                            if (finalScore > bestResult.score) {
-                                bestResult = {
-                                    area: area.name,
-                                    fixed: fixedAttr,
-                                    bases: topBases,
-                                    score: finalScore
-                                };
-                            }
+            areas.forEach(area => {
+                [...area.extra, ...area.skill].forEach(fixed => {
+                    const matches = needed.filter(w => area.base.includes(w['기초속성']) && (w['추가속성'] === fixed || w['스킬속성'] === fixed));
+                    if (matches.length > 0) {
+                        const baseCounts = {};
+                        matches.forEach(w => baseCounts[w['기초속성']] = (baseCounts[w['기초속성']] || 0) + 1);
+                        const topBases = Object.entries(baseCounts).sort((a,b) => b[1]-a[1]).slice(0,3).map(e => e[0]);
+                        const finalTargets = matches.filter(w => topBases.includes(w['기초속성']));
+                        
+                        if (finalTargets.length > best.score) {
+                            best = { area: area.name, fixed, bases: topBases, score: finalTargets.length, targets: finalTargets };
                         }
-                    });
+                    }
                 });
+            });
 
-                // 3. 결과 렌더링
-                document.getElementById('result').style.display = 'block';
-                document.getElementById('best-area').innerText = bestResult.area || "데이터 없음";
-                document.getElementById('best-fixed').innerText = bestResult.fixed || "-";
-                document.getElementById('best-bases').innerHTML = (bestResult.bases || [])
-                    .map(b => `<span class="tag">${b}</span>`).join('');
-                document.getElementById('summary').innerText = `※ 이 조합으로 선택 시, 미보유 종결 기질 ${bestResult.score}종 저격 가능`;
-
-            } catch (e) {
-                console.error(e);
-                alert("데이터 분석 중 오류가 발생했습니다. 구글 시트 게시 여부를 확인하세요.");
-            }
+            // 결과 업데이트 및 하이라이트
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('res-area').innerText = best.area;
+            document.getElementById('res-fixed').innerText = best.fixed;
+            document.getElementById('res-bases').innerHTML = best.bases.map(b => `<span class="tag">${b}</span>`).join('');
+            document.getElementById('res-summary').innerText = `※ 미보유 종결 기질 ${best.score}종 저격 가능`;
+            
+            renderTable(best.targets); // 저격 대상 하이라이트하여 재렌더링
         }
 
         function parseCSV(csv) {
@@ -140,12 +151,11 @@ HTML
             const headers = lines[0].split(",").map(h => h.trim().replace("\r", ""));
             return lines.slice(1).map(line => {
                 const values = line.split(",").map(v => v.trim().replace("\r", ""));
-                return headers.reduce((obj, header, i) => {
-                    obj[header] = values[i];
-                    return obj;
-                }, {});
+                return headers.reduce((obj, h, i) => (obj[h] = values[i], obj), {});
             });
         }
+
+        init();
     </script>
 </body>
 </html>
