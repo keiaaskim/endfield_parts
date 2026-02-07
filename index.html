@@ -3,41 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엔드필드 파밍 대시보드 v1.0</title>
+    <title>엔드필드 파밍 대시보드 v1.2</title>
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #fbac24; --border: #333; --white: #ffffff; --highlight-all: rgba(251, 172, 36, 0.2); --highlight-pri: rgba(56, 189, 248, 0.2); }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
         .left-panel { flex: 1; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); }
-        .right-panel { width: 380px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
+        .right-panel { width: 400px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
         thead { position: sticky; top: 0; background: var(--card); z-index: 10; }
         th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        .col-name { width: auto; } .col-char { width: 70px; }
-        .col-fixed { width: 45px; text-align: center; } .col-attr { width: 65px; }
-
+        .col-name { width: auto; } .col-char { width: 70px; } .col-fixed { width: 45px; text-align: center; } .col-attr { width: 65px; }
         th { color: var(--accent); font-weight: 600; }
         tr:hover { background: #252525; }
         tr.active-all { background: var(--highlight-all) !important; border-left: 4px solid var(--accent); }
         tr.active-pri { background: var(--highlight-pri) !important; border-left: 4px solid #38bdf8; }
 
-        .analysis-card { background: #252525; padding: 20px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; position: relative; }
-        .analysis-card:hover { border-color: var(--accent); }
-        .analysis-card.active { border: 2px solid var(--accent); box-shadow: 0 0 15px rgba(251, 172, 36, 0.1); }
+        .analysis-card { background: #252525; padding: 25px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+        .analysis-card.active { border: 2px solid var(--accent); }
+        .btn { background: var(--accent); color: #000; padding: 18px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; margin-bottom: 10px; }
         
-        .btn { background: var(--accent); color: #000; padding: 16px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-bottom: 10px; transition: 0.2s; }
-        .btn:hover { filter: brightness(1.1); }
+        .card-header { font-size: 1.2rem; color: var(--accent); font-weight: bold; margin-bottom: 20px; }
+        .info-row { margin-bottom: 15px; }
+        .info-label { display: block; font-size: 0.9rem; color: var(--white); font-weight: 700; margin-bottom: 8px; }
         
-        /* 카드 내부 텍스트 스타일 */
-        .card-header { font-size: 1rem; color: var(--accent); font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-        .info-row { margin-bottom: 12px; }
-        .info-label { display: block; font-size: 0.8rem; color: var(--white); font-weight: 600; margin-bottom: 4px; }
-        .info-value { display: block; font-size: 1.1rem; color: var(--text); font-weight: 500; }
-        .tag { display: inline-block; background: #333; color: var(--text); padding: 3px 8px; border-radius: 4px; margin-right: 4px; font-size: 0.8rem; border: 1px solid #444; }
-        .tag.free { color: #888; border-style: dashed; }
-        .target-summary { margin-top: 10px; font-size: 0.9rem; color: var(--white); font-weight: bold; }
+        /* 일체감 있는 박스 디자인 */
+        .box-value { 
+            display: inline-block; background: #333; color: var(--text); 
+            padding: 8px 12px; border-radius: 6px; font-size: 1.1rem; 
+            font-weight: 500; border: 1px solid #444; min-width: 60px; text-align: center;
+        }
+        .box-value.area { color: var(--accent); border-color: var(--accent); width: calc(100% - 24px); text-align: left; }
+        .tag-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tag-free { color: #777; border-style: dashed; }
+        .target-summary { margin-top: 15px; font-size: 1rem; color: var(--white); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -56,19 +55,17 @@
     </div>
 
     <div class="right-panel">
-        <div style="text-align: center; padding-bottom: 10px;">
-            <h2 style="margin: 0 0 15px 0; color: var(--accent); font-size: 1.4rem;">🎯 파밍 스캐너</h2>
+        <div style="text-align: center;">
+            <h2 style="margin: 0 0 15px 0; color: var(--accent); font-size: 1.5rem;">🎯 파밍 스캐너</h2>
             <button class="btn" onclick="runFullAnalysis()">실시간 데이터 분석 시작</button>
         </div>
-
         <div id="card-all" class="analysis-card" onclick="toggleHighlight('all')">
             <div class="card-header">🌐 전체 기준 최적</div>
-            <div id="all-content">분석 시작 버튼을 눌러주세요.</div>
+            <div id="all-content">데이터 분석을 시작해 주세요.</div>
         </div>
-
         <div id="card-pri" class="analysis-card" onclick="toggleHighlight('pri')">
             <div class="card-header">⭐ 우선순위 기준 최적</div>
-            <div id="pri-content">분석 시작 버튼을 눌러주세요.</div>
+            <div id="pri-content">데이터 분석을 시작해 주세요.</div>
         </div>
     </div>
 
@@ -81,35 +78,41 @@
         let analysisResults = { all: null, pri: null };
 
         async function init() {
-            try {
-                const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
-                weaponData = parseCSV(await wRes.text());
-                inventory = parseCSV(await pRes.text());
-                renderTable();
-            } catch(e) { alert("데이터 로딩 중 오류가 발생했습니다."); }
+            const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
+            weaponData = parseCSV(await wRes.text());
+            inventory = parseCSV(await pRes.text());
+            renderTable();
+        }
+
+        function checkAcquired(w) {
+            return inventory.some(p => 
+                p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']
+            );
         }
 
         function renderTable(highlightMode = null) {
             const body = document.getElementById('weapon-body');
             const sorted = [...weaponData].sort((a, b) => {
-                const aDone = a['기질보유'] === 'ㅇ' ? 1 : 0;
-                const bDone = b['기질보유'] === 'ㅇ' ? 1 : 0;
+                const aDone = checkAcquired(a) ? 1 : 0;
+                const bDone = checkAcquired(b) ? 1 : 0;
                 if (aDone !== bDone) return aDone - bDone;
                 const aPri = a['우선순위'] === 'ㅇ' ? 1 : 0;
                 const bPri = b['우선순위'] === 'ㅇ' ? 1 : 0;
                 if (aPri !== bPri) return bPri - aPri;
-                return a['기초속성'].localeCompare(b['기초속성']) || a['추가속성'].localeCompare(b['추가속성']);
+                return a['기초속성'].localeCompare(b['기초속성']);
             });
 
             body.innerHTML = sorted.map(w => {
+                const isAcquired = checkAcquired(w) ? 'ㅇ' : '';
                 let hClass = '';
                 if (highlightMode === 'all' && analysisResults.all?.targets.some(t => t['무기명'] === w['무기명'])) hClass = 'active-all';
                 if (highlightMode === 'pri' && analysisResults.pri?.targets.some(t => t['무기명'] === w['무기명'])) hClass = 'active-pri';
+
                 return `<tr class="${hClass}">
                     <td>${w['무기명']}</td><td>${w['사용캐릭']}</td>
                     <td class="col-fixed">${w['무기보유']}</td><td class="col-fixed">${w['우선순위']}</td>
                     <td class="col-attr">${w['기초속성']}</td><td class="col-attr">${w['추가속성']}</td>
-                    <td class="col-attr">${w['스킬속성']}</td><td class="col-fixed">${w['기질보유']}</td>
+                    <td class="col-attr">${w['스킬속성']}</td><td class="col-fixed">${isAcquired}</td>
                 </tr>`;
             }).join('');
         }
@@ -117,7 +120,7 @@
         async function runFullAnalysis() {
             const aRes = await fetch('areas.json');
             const areas = await aRes.json();
-            const needed = weaponData.filter(w => !inventory.some(p => p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']));
+            const needed = weaponData.filter(w => !checkAcquired(w));
             const priorities = needed.filter(w => w['우선순위'] === 'ㅇ');
 
             analysisResults.all = findBest(areas, needed);
@@ -131,7 +134,6 @@
         function findBest(areas, list) {
             let best = { score: 0, targets: [] };
             if (list.length === 0) return null;
-
             areas.forEach(area => {
                 [...new Set([...area.extra, ...area.skill])].forEach(fixed => {
                     const matches = list.filter(w => area.base.includes(w['기초속성']) && (w['추가속성'] === fixed || w['스킬속성'] === fixed));
@@ -151,16 +153,14 @@
 
         function updateCardUI(type, data) {
             const container = document.getElementById(`${type}-content`);
-            if (!data) { container.innerHTML = "목표가 없습니다."; return; }
-
-            // 스탯이 3개가 안 될 경우 '자유' 추가
-            let baseTags = data.bases.map(b => `<span class="tag">${b}</span>`);
-            while(baseTags.length < 3) { baseTags.push(`<span class="tag free">자유</span>`); }
+            if (!data) { container.innerHTML = "목표 없음"; return; }
+            let baseTags = data.bases.map(b => `<span class="box-value">${b}</span>`);
+            while(baseTags.length < 3) baseTags.push(`<span class="box-value tag-free">자유</span>`);
 
             container.innerHTML = `
-                <div class="info-row"><span class="info-label">파밍 지역</span><span class="info-value">${data.area}</span></div>
-                <div class="info-row"><span class="info-label">고정 스탯</span><div class="info-value">${baseTags.join('')}</div></div>
-                <div class="info-row"><span class="info-label">고정 속성</span><span class="info-value">${data.fixed}</span></div>
+                <div class="info-row"><span class="info-label">파밍 지역</span><span class="box-value area">${data.area}</span></div>
+                <div class="info-row"><span class="info-label">고정 스탯</span><div class="tag-group">${baseTags.join('')}</div></div>
+                <div class="info-row"><span class="info-label">고정 속성</span><span class="box-value">${data.fixed}</span></div>
                 <div class="target-summary">🎯 ${data.score}종 저격 가능</div>
             `;
         }
