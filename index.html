@@ -3,40 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엔드필드 파밍 대시보드 v1.2</title>
+    <title>엔드필드 파밍 대시보드 v1.3</title>
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #fbac24; --border: #333; --white: #ffffff; --highlight-all: rgba(251, 172, 36, 0.2); --highlight-pri: rgba(56, 189, 248, 0.2); }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .left-panel { flex: 1; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); }
-        .right-panel { width: 400px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
         
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+        /* 레이아웃 제어 */
+        .left-panel { flex: 1; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); }
+        .right-panel { width: 400px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; }
+        
+        /* 비율 기반 테이블 설정 */
+        table { width: 100%; border-collapse: collapse; font-size: 0.95rem; table-layout: fixed; }
         thead { position: sticky; top: 0; background: var(--card); z-index: 10; }
-        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .col-name { width: auto; } .col-char { width: 70px; } .col-fixed { width: 45px; text-align: center; } .col-attr { width: 65px; }
-        th { color: var(--accent); font-weight: 600; }
+        th, td { padding: 14px 5px; text-align: center; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* 열별 비율 할당 (Total 100%) */
+        .col-name { width: 25%; }
+        .col-char { width: 15%; }
+        .col-check { width: 8%; }  /* 보유, 우선, 확보 공통 */
+        .col-attr  { width: 12%; } /* 기초, 추가, 스킬 공통 */
+
+        th { color: var(--accent); font-weight: 600; border-bottom: 2px solid var(--border); }
         tr:hover { background: #252525; }
         tr.active-all { background: var(--highlight-all) !important; border-left: 4px solid var(--accent); }
         tr.active-pri { background: var(--highlight-pri) !important; border-left: 4px solid #38bdf8; }
 
+        /* 분석 카드 디자인 */
         .analysis-card { background: #252525; padding: 25px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
         .analysis-card.active { border: 2px solid var(--accent); }
         .btn { background: var(--accent); color: #000; padding: 18px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; margin-bottom: 10px; }
         
         .card-header { font-size: 1.2rem; color: var(--accent); font-weight: bold; margin-bottom: 20px; }
         .info-row { margin-bottom: 15px; }
-        .info-label { display: block; font-size: 0.9rem; color: var(--white); font-weight: 700; margin-bottom: 8px; }
+        .info-label { display: block; font-size: 0.95rem; color: var(--white); font-weight: 700; margin-bottom: 8px; text-align: left; }
         
-        /* 일체감 있는 박스 디자인 */
         .box-value { 
             display: inline-block; background: #333; color: var(--text); 
             padding: 8px 12px; border-radius: 6px; font-size: 1.1rem; 
             font-weight: 500; border: 1px solid #444; min-width: 60px; text-align: center;
         }
-        .box-value.area { color: var(--accent); border-color: var(--accent); width: calc(100% - 24px); text-align: left; }
-        .tag-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .box-value.area { color: var(--accent); border-color: var(--accent); width: calc(100% - 24px); text-align: center; }
+        .tag-group { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
         .tag-free { color: #777; border-style: dashed; }
-        .target-summary { margin-top: 15px; font-size: 1rem; color: var(--white); font-weight: bold; }
+        .target-summary { margin-top: 15px; font-size: 1rem; color: var(--white); font-weight: bold; text-align: left; }
     </style>
 </head>
 <body>
@@ -45,9 +54,9 @@
             <thead>
                 <tr>
                     <th class="col-name">무기명</th><th class="col-char">캐릭</th>
-                    <th class="col-fixed">보유</th><th class="col-fixed">우선</th>
+                    <th class="col-check">보유</th><th class="col-check">우선</th>
                     <th class="col-attr">기초</th><th class="col-attr">추가</th><th class="col-attr">스킬</th>
-                    <th class="col-fixed">확보</th>
+                    <th class="col-check">확보</th>
                 </tr>
             </thead>
             <tbody id="weapon-body"></tbody>
@@ -78,12 +87,15 @@
         let analysisResults = { all: null, pri: null };
 
         async function init() {
-            const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
-            weaponData = parseCSV(await wRes.text());
-            inventory = parseCSV(await pRes.text());
-            renderTable();
+            try {
+                const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
+                weaponData = parseCSV(await wRes.text());
+                inventory = parseCSV(await pRes.text());
+                renderTable();
+            } catch(e) { console.error(e); }
         }
 
+        // 인벤토리 대조 자동 체크 로직
         function checkAcquired(w) {
             return inventory.some(p => 
                 p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']
@@ -110,9 +122,9 @@
 
                 return `<tr class="${hClass}">
                     <td>${w['무기명']}</td><td>${w['사용캐릭']}</td>
-                    <td class="col-fixed">${w['무기보유']}</td><td class="col-fixed">${w['우선순위']}</td>
-                    <td class="col-attr">${w['기초속성']}</td><td class="col-attr">${w['추가속성']}</td>
-                    <td class="col-attr">${w['스킬속성']}</td><td class="col-fixed">${isAcquired}</td>
+                    <td>${w['무기보유']}</td><td>${w['우선순위']}</td>
+                    <td>${w['기초속성']}</td><td>${w['추가속성']}</td>
+                    <td>${w['스킬속성']}</td><td>${isAcquired}</td>
                 </tr>`;
             }).join('');
         }
@@ -159,8 +171,8 @@
 
             container.innerHTML = `
                 <div class="info-row"><span class="info-label">파밍 지역</span><span class="box-value area">${data.area}</span></div>
-                <div class="info-row"><span class="info-label">고정 스탯</span><div class="tag-group">${baseTags.join('')}</div></div>
-                <div class="info-row"><span class="info-label">고정 속성</span><span class="box-value">${data.fixed}</span></div>
+                <div class="info-row"><span class="info-label">고정 스텟</span><div class="tag-group">${baseTags.join('')}</div></div>
+                <div class="info-row"><span class="info-label">고정 속성</span><span class="box-value" style="width:calc(100% - 24px);">${data.fixed}</span></div>
                 <div class="target-summary">🎯 ${data.score}종 저격 가능</div>
             `;
         }
