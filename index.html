@@ -5,60 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>엔드필드 파밍 대시보드</title>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #fbac24; --border: #333; --highlight: rgba(251, 172, 36, 0.2); }
+        :root { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #fbac24; --border: #333; --highlight-all: rgba(251, 172, 36, 0.2); --highlight-pri: rgba(56, 189, 248, 0.2); }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* 레이아웃 구성 */
         .left-panel { flex: 1; overflow-y: auto; padding: 20px; border-right: 1px solid var(--border); }
-        .right-panel { width: 350px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 20px; }
+        .right-panel { width: 380px; padding: 20px; background: var(--card); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
 
-        /* 테이블 디자인 */
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
         thead { position: sticky; top: 0; background: var(--card); z-index: 10; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--accent); font-weight: 600; text-transform: uppercase; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* 컬럼 폭 설정 */
+        .col-name { width: auto; } .col-char { width: 80px; }
+        .col-fixed { width: 50px; text-align: center; } 
+        .col-attr { width: 70px; }
+
+        th { color: var(--accent); font-weight: 600; }
         tr:hover { background: #252525; }
         
-        /* 분석 결과 하이라이트 */
-        tr.target-row { background: var(--highlight) !important; border-left: 4px solid var(--accent); }
+        /* 하이라이트 스타일 */
+        tr.active-all { background: var(--highlight-all) !important; border-left: 4px solid var(--accent); }
+        tr.active-pri { background: var(--highlight-pri) !important; border-left: 4px solid #38bdf8; }
 
-        /* 카드 디자인 */
-        .analysis-card { background: #252525; padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
-        .btn { background: var(--accent); color: #000; padding: 15px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; }
-        .result-item { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
-        .tag { display: inline-block; background: #444; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 0.8rem; }
+        .analysis-card { background: #252525; padding: 15px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+        .analysis-card:hover { border-color: var(--accent); }
+        .analysis-card.active { border: 2px solid var(--accent); }
+        .btn { background: var(--accent); color: #000; padding: 15px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem; margin-bottom: 10px; }
+        
+        .res-title { font-size: 0.85rem; color: #888; margin-bottom: 8px; display: block; }
+        .res-value { font-size: 1.1rem; font-weight: bold; color: #fff; }
+        .tag { display: inline-block; background: #444; padding: 2px 6px; border-radius: 4px; margin: 2px; font-size: 0.75rem; }
     </style>
 </head>
 <body>
     <div class="left-panel">
-        <table id="weapon-table">
+        <table>
             <thead>
                 <tr>
-                    <th>무기명</th><th>캐릭</th><th>보유</th><th>우선</th><th>기초</th><th>추가</th><th>스킬</th><th>기질</th>
+                    <th class="col-name">무기명</th><th class="col-char">캐릭</th>
+                    <th class="col-fixed">보유</th><th class="col-fixed">우선</th>
+                    <th class="col-attr">기초</th><th class="col-attr">추가</th><th class="col-attr">스킬</th>
+                    <th class="col-fixed">확보</th>
                 </tr>
             </thead>
-            <tbody id="weapon-body">
-                </tbody>
+            <tbody id="weapon-body"></tbody>
         </table>
     </div>
 
     <div class="right-panel">
-        <div class="analysis-card">
-            <h2 style="margin-top:0; color:var(--accent);">🎯 파밍 스캐너</h2>
-            <button class="btn" onclick="runAnalysis()">실시간 데이터 분석</button>
-            
-            <div id="result-box" style="display:none;">
-                <div class="result-item">
-                    <small>추천 지역</small><br><b id="res-area" style="font-size:1.2rem;">-</b>
-                </div>
-                <div class="result-item">
-                    <small>고정 속성</small><br><b id="res-fixed">-</b>
-                </div>
-                <div class="result-item">
-                    <small>기초속성 3종</small><div id="res-bases"></div>
-                </div>
-                <p id="res-summary" style="font-size:0.8rem; color:#888;"></p>
-            </div>
+        <div style="text-align: center; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+            <h2 style="margin: 0 0 15px 0; color: var(--accent);">🎯 파밍 스캐너</h2>
+            <button class="btn" onclick="runFullAnalysis()">실시간 데이터 분석</button>
+        </div>
+
+        <div id="card-all" class="analysis-card" onclick="toggleHighlight('all')">
+            <span class="res-title">🌐 미확보 전체 기준 최적</span>
+            <div id="all-content">분석 버튼을 눌러주세요.</div>
+        </div>
+
+        <div id="card-pri" class="analysis-card" onclick="toggleHighlight('pri')">
+            <span class="res-title">⭐ 우선순위 목표 기준 최적</span>
+            <div id="pri-content">분석 버튼을 눌러주세요.</div>
         </div>
     </div>
 
@@ -68,8 +75,8 @@
 
         let weaponData = [];
         let inventory = [];
+        let analysisResults = { all: null, pri: null };
 
-        // 초기 데이터 로드
         async function init() {
             const [wRes, pRes] = await Promise.all([fetch(WEAPON_CSV), fetch(PARTS_CSV)]);
             weaponData = parseCSV(await wRes.text());
@@ -77,73 +84,81 @@
             renderTable();
         }
 
-        function renderTable(targetList = []) {
+        function renderTable(highlightMode = null) {
             const body = document.getElementById('weapon-body');
-            
-            // 정렬 로직
             const sorted = [...weaponData].sort((a, b) => {
-                const aHasPart = a['기질보유'] === 'ㅇ' ? 1 : 0;
-                const bHasPart = b['기질보유'] === 'ㅇ' ? 1 : 0;
-                if (aHasPart !== bHasPart) return aHasPart - bHasPart; // 1순위: 기질 미보유 위로
+                const aDone = a['기질보유'] === 'ㅇ' ? 1 : 0;
+                const bDone = b['기질보유'] === 'ㅇ' ? 1 : 0;
+                if (aDone !== bDone) return aDone - bDone;
 
-                const aHasWeapon = a['무기보유'] === 'ㅇ' ? 1 : 0;
-                const bHasWeapon = b['무기보유'] === 'ㅇ' ? 1 : 0;
-                if (aHasWeapon !== bHasWeapon) return bHasWeapon - aHasWeapon; // 2순위: 무기 보유 우선
+                const aPri = a['우선순위'] === 'ㅇ' ? 1 : 0;
+                const bPri = b['우선순위'] === 'ㅇ' ? 1 : 0;
+                if (aPri !== bPri) return bPri - aPri;
 
-                const aPriority = a['우선순위'] === 'ㅇ' ? 1 : 0;
-                const bPriority = b['우선순위'] === 'ㅇ' ? 1 : 0;
-                if (aPriority !== bPriority) return bPriority - aPriority; // 3순위: 우선순위 체크
-
-                return a['기초속성'].localeCompare(b['기초속성']); // 나머지 속성순
+                return a['기초속성'].localeCompare(b['기초속성']) || a['추가속성'].localeCompare(b['추가속성']);
             });
 
             body.innerHTML = sorted.map(w => {
-                const isTarget = targetList.some(t => t['무기명'] === w['무기명']);
-                return `
-                    <tr class="${isTarget ? 'target-row' : ''}">
-                        <td>${w['무기명']}</td><td>${w['사용캐릭']}</td>
-                        <td>${w['무기보유']}</td><td>${w['우선순위']}</td>
-                        <td>${w['기초속성']}</td><td>${w['추가속성']}</td>
-                        <td>${w['스킬속성']}</td><td>${w['기질보유']}</td>
-                    </tr>`;
+                let hClass = '';
+                if (highlightMode === 'all' && analysisResults.all?.targets.some(t => t['무기명'] === w['무기명'])) hClass = 'active-all';
+                if (highlightMode === 'pri' && analysisResults.pri?.targets.some(t => t['무기명'] === w['무기명'])) hClass = 'active-pri';
+
+                return `<tr class="${hClass}">
+                    <td>${w['무기명']}</td><td>${w['사용캐릭']}</td>
+                    <td class="col-fixed">${w['무기보유']}</td><td class="col-fixed">${w['우선순위']}</td>
+                    <td class="col-attr">${w['기초속성']}</td><td class="col-attr">${w['추가속성']}</td>
+                    <td class="col-attr">${w['스킬속성']}</td><td class="col-fixed">${w['기질보유']}</td>
+                </tr>`;
             }).join('');
         }
 
-        async function runAnalysis() {
+        async function runFullAnalysis() {
             const aRes = await fetch('areas.json');
             const areas = await aRes.json();
+            const needed = weaponData.filter(w => !inventory.some(p => p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']));
+            const priorities = needed.filter(w => w['우선순위'] === 'ㅇ');
 
-            // 미보유 기질 필터링 (재고 대조)
-            const needed = weaponData.filter(w => !inventory.some(p => 
-                p['기초속성'] === w['기초속성'] && p['추가속성'] === w['추가속성'] && p['스킬속성'] === w['스킬속성']
-            ));
+            analysisResults.all = findBest(areas, needed);
+            analysisResults.pri = findBest(areas, priorities);
 
-            let best = { score: -1, targets: [] };
+            updateCard('all', analysisResults.all);
+            updateCard('pri', analysisResults.pri);
+            toggleHighlight('all'); 
+        }
+
+        function findBest(areas, list) {
+            let best = { score: 0, targets: [] };
+            if (list.length === 0) return null;
 
             areas.forEach(area => {
-                [...area.extra, ...area.skill].forEach(fixed => {
-                    const matches = needed.filter(w => area.base.includes(w['기초속성']) && (w['추가속성'] === fixed || w['스킬속성'] === fixed));
+                [...new Set([...area.extra, ...area.skill])].forEach(fixed => {
+                    const matches = list.filter(w => area.base.includes(w['기초속성']) && (w['추가속성'] === fixed || w['스킬속성'] === fixed));
                     if (matches.length > 0) {
                         const baseCounts = {};
                         matches.forEach(w => baseCounts[w['기초속성']] = (baseCounts[w['기초속성']] || 0) + 1);
                         const topBases = Object.entries(baseCounts).sort((a,b) => b[1]-a[1]).slice(0,3).map(e => e[0]);
                         const finalTargets = matches.filter(w => topBases.includes(w['기초속성']));
-                        
                         if (finalTargets.length > best.score) {
                             best = { area: area.name, fixed, bases: topBases, score: finalTargets.length, targets: finalTargets };
                         }
                     }
                 });
             });
+            return best.score > 0 ? best : null;
+        }
 
-            // 결과 업데이트 및 하이라이트
-            document.getElementById('result-box').style.display = 'block';
-            document.getElementById('res-area').innerText = best.area;
-            document.getElementById('res-fixed').innerText = best.fixed;
-            document.getElementById('res-bases').innerHTML = best.bases.map(b => `<span class="tag">${b}</span>`).join('');
-            document.getElementById('res-summary').innerText = `※ 미보유 종결 기질 ${best.score}종 저격 가능`;
-            
-            renderTable(best.targets); // 저격 대상 하이라이트하여 재렌더링
+        function updateCard(type, data) {
+            const container = document.getElementById(`${type}-content`);
+            if (!data) { container.innerHTML = "해당하는 목표가 없습니다."; return; }
+            container.innerHTML = `<div class="res-value">${data.area} / ${data.fixed}</div>
+                <div>${data.bases.map(b => `<span class="tag">${b}</span>`).join('')}</div>
+                <small style="color:#aaa;">🎯 ${data.score}종 저격 가능</small>`;
+        }
+
+        function toggleHighlight(mode) {
+            document.querySelectorAll('.analysis-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card-${mode}`).classList.add('active');
+            renderTable(mode);
         }
 
         function parseCSV(csv) {
@@ -151,7 +166,7 @@
             const headers = lines[0].split(",").map(h => h.trim().replace("\r", ""));
             return lines.slice(1).map(line => {
                 const values = line.split(",").map(v => v.trim().replace("\r", ""));
-                return headers.reduce((obj, h, i) => (obj[h] = values[i], obj), {});
+                return headers.reduce((obj, h, i) => (obj[h] = values[i] || "", obj), {});
             });
         }
 
